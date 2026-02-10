@@ -1,0 +1,196 @@
+syntax = "proto3";
+
+package cosyvoice.v2;
+option go_package = "protos/";
+
+// 音频格式枚举
+enum AudioFormat {
+  AUDIO_FORMAT_UNKNOWN = 0;
+  AUDIO_FORMAT_PCM = 1;      // Raw PCM 16-bit
+  AUDIO_FORMAT_WAV = 2;      // WAV container
+  AUDIO_FORMAT_MP3 = 3;      // MP3 encoded
+  AUDIO_FORMAT_OPUS = 4;     // Opus encoded (低延迟)
+}
+
+// 采样率枚举
+enum SampleRate {
+  SAMPLE_RATE_UNKNOWN = 0;
+  SAMPLE_RATE_16000 = 16000;
+  SAMPLE_RATE_22050 = 22050;
+  SAMPLE_RATE_24000 = 24000;
+  SAMPLE_RATE_44100 = 44100;
+  SAMPLE_RATE_48000 = 48000;
+}
+
+// 推理模式枚举
+enum InferenceMode {
+  INFERENCE_MODE_UNKNOWN = 0;
+  INFERENCE_MODE_SFT = 1;           // Supervised Fine-Tuning
+  INFERENCE_MODE_ZERO_SHOT = 2;     // Zero-shot voice cloning
+  INFERENCE_MODE_CROSS_LINGUAL = 3; // Cross-lingual synthesis
+  INFERENCE_MODE_INSTRUCT = 4;      // Instruction-based (CosyVoice 1.0)
+  INFERENCE_MODE_INSTRUCT2 = 5;     // Instruction-based (CosyVoice 2/3)
+  INFERENCE_MODE_VC = 6;            // Voice Conversion
+}
+
+// 合成参数
+message SynthesisParams {
+  float speed = 1;           // 语速，默认 1.0，范围 0.5-2.0
+  float volume = 2;          // 音量，默认 1.0，范围 0.5-2.0
+  AudioFormat format = 3;    // 输出音频格式
+  SampleRate sample_rate = 4; // 输出采样率
+  bool stream = 5;           // 是否流式输出
+  int32 chunk_size = 6;      // 流式输出块大小（tokens）
+}
+
+// SFT 请求
+message SFTRequest {
+  string spk_id = 1;          // 说话人 ID
+  string tts_text = 2;        // 要合成的文本
+  SynthesisParams params = 3; // 合成参数
+}
+
+// Zero-shot 请求
+message ZeroShotRequest {
+  string tts_text = 1;         // 要合成的文本
+  string prompt_text = 2;      // 提示文本
+  bytes prompt_audio = 3;      // 提示音频（PCM 16-bit, 16kHz）
+  string zero_shot_spk_id = 4; // 可选的自定义说话人 ID
+  SynthesisParams params = 5;  // 合成参数
+}
+
+// Cross-lingual 请求
+message CrossLingualRequest {
+  string tts_text = 1;         // 要合成的文本
+  bytes prompt_audio = 2;      // 提示音频（PCM 16-bit, 16kHz）
+  string zero_shot_spk_id = 3; // 可选的自定义说话人 ID
+  SynthesisParams params = 4;  // 合成参数
+}
+
+// Instruct 请求（CosyVoice 1.0）
+message InstructRequest {
+  string tts_text = 1;       // 要合成的文本
+  string spk_id = 2;         // 说话人 ID
+  string instruct_text = 3;  // 指令文本（情感、风格描述）
+  SynthesisParams params = 4; // 合成参数
+}
+
+// Instruct2 请求（CosyVoice 2/3）
+message Instruct2Request {
+  string tts_text = 1;         // 要合成的文本
+  string instruct_text = 2;    // 指令文本（情感、风格描述）
+  bytes prompt_audio = 3;      // 提示音频（PCM 16-bit, 16kHz）
+  string zero_shot_spk_id = 4; // 可选的自定义说话人 ID
+  SynthesisParams params = 5;  // 合成参数
+}
+
+// Voice Conversion 请求
+message VCRequest {
+  bytes source_audio = 1;      // 源音频（PCM 16-bit, 16kHz）
+  bytes prompt_audio = 2;      // 目标音频（PCM 16-bit, 16kHz）
+  SynthesisParams params = 3;  // 合成参数
+}
+
+// 统一请求消息
+message InferenceRequest {
+  string request_id = 1;      // 请求 ID（用于追踪和会话管理）
+  InferenceMode mode = 2;     // 推理模式
+
+  oneof payload {
+    SFTRequest sft_request = 10;
+    ZeroShotRequest zero_shot_request = 11;
+    CrossLingualRequest cross_lingual_request = 12;
+    InstructRequest instruct_request = 13;
+    Instruct2Request instruct2_request = 14;
+    VCRequest vc_request = 15;
+  }
+}
+
+// 音频块响应
+message AudioChunk {
+  bytes audio_data = 1;      // 音频数据
+  int32 sequence_number = 2; // 序列号
+  bool is_final = 3;         // 是否最后一个块
+  string message = 4;        // 状态消息
+}
+
+// 流式响应
+message StreamingResponse {
+  string request_id = 1;     // 对应的请求 ID
+  oneof payload {
+    AudioChunk audio_chunk = 10;
+    string error = 11;       // 错误信息
+    string status = 12;      // 状态信息
+  }
+}
+
+// 非流式响应
+message InferenceResponse {
+  string request_id = 1;     // 对应的请求 ID
+  bytes audio_data = 2;      // 完整音频数据
+  string format = 3;         // 音频格式
+  int32 sample_rate = 4;     // 采样率
+  string message = 5;        // 状态消息
+  bool success = 6;          // 是否成功
+  string error = 7;          // 错误信息（如果失败）
+}
+
+// 音频上传请求（用于声音克隆）
+message UploadAudioRequest {
+  string audio_id = 1;       // 音频 ID
+  string spk_id = 2;         // 关联的说话人 ID
+  oneof payload {
+    bytes audio_chunk = 10;  // 音频数据块
+    string metadata = 11;    // 元数据（采样率、格式等）
+  }
+}
+
+// 音频上传响应
+message UploadAudioResponse {
+  string audio_id = 1;       // 音频 ID
+  bool success = 2;          // 是否成功
+  string message = 3;        // 状态消息
+  int64 size_bytes = 4;      // 上传大小
+}
+
+// 说话人信息
+message SpeakerInfo {
+  string spk_id = 1;         // 说话人 ID
+  string name = 2;           // 说话人名称
+  string gender = 3;         // 性别
+  string language = 4;       // 语言
+}
+
+// 列出可用说话人响应
+message ListSpeakersResponse {
+  repeated SpeakerInfo speakers = 1; // 说话人列表
+}
+
+// 服务定义
+service CosyVoiceService {
+  // 单次推理（非流式）
+  rpc Inference(InferenceRequest) returns (InferenceResponse);
+
+  // 流式推理（双向流）
+  rpc StreamingInference(stream InferenceRequest) returns (stream StreamingResponse);
+
+  // 上传音频（用于声音克隆）
+  rpc UploadAudio(stream UploadAudioRequest) returns (UploadAudioResponse);
+
+  // 列出可用说话人
+  rpc ListSpeakers(Empty) returns (ListSpeakersResponse);
+
+  // 获取服务健康状态
+  rpc HealthCheck(Empty) returns (HealthResponse);
+}
+
+// 空消息
+message Empty {}
+
+// 健康检查响应
+message HealthResponse {
+  bool healthy = 1;
+  string version = 2;
+  string model_name = 3;
+  int32 active_sessions = 4;
+}

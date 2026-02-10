@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  cosyvoice-grpc:
+    build:
+      context: ../../..
+      dockerfile: runtime/python/grpc/Dockerfile
+    container_name: cosyvoice-grpc
+    ports:
+      - "50051:50051"
+      - "8000:8000"
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - MODEL_ID=iic/CosyVoice2-0.5B
+      - MAX_CONCURRENT=4
+      - LOG_LEVEL=INFO
+    volumes:
+      - /tmp/cosyvoice_cache:/root/.cache/modelscope
+      - /tmp/cosyvoice_uploads:/tmp/cosyvoice_uploads
+      - ./logs:/app/logs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import grpc; channel = grpc.insecure_channel('localhost:50051'); stub = cosyvoice_v2_pb2_grpc.CosyVoiceServiceStub(channel); stub.HealthCheck({}); print('Healthy')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - cosyvoice-network
+
+  # 可选：Prometheus 监控
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cosyvoice-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - cosyvoice-network
+
+  # 可选：Grafana 可视化
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cosyvoice-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - cosyvoice-network
+
+networks:
+  cosyvoice-network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-storage:

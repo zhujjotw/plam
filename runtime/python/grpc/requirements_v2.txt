@@ -1,0 +1,22 @@
+# CosyVoice gRPC Server V2 Dependencies
+
+# Core dependencies
+grpcio==1.67.0
+grpcio-tools==1.67.0
+protobuf==5.28.0
+
+# Audio processing
+soundfile==0.12.1
+pydub==0.25.1
+opuslib==3.0.1
+
+# Data validation
+pydantic==2.9.0
+
+# Monitoring and logging
+prometheus-client==0.21.0
+structlog==24.4.0
+
+# Note: Core model dependencies (torch, transformers, etc.) should be
+# installed from the main requirements.txt file in the project root.
+# This file only contains additional dependencies for the gRPC server.
