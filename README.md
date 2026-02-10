@@ -218,6 +218,40 @@ CosyVoice/
 └── tools/                # 特征提取工具
 ```
 
+## 贡献者
+
+感谢所有为本项目做出贡献的开发者！
+
+### 核心团队
+
+- **FunAudioLLM 团队** - 原始 CosyVoice 项目开发和维护
+  - 论文作者：Zhihao Du, Qian Chen, Shiliang Zhang 等
+
+### gRPC API 服务改造
+
+- **[朱佳佳](https://github.com/zhujjotw)** - 生产级 gRPC API 服务开发
+  - 实现了完整的 gRPC 双向流通信
+  - 添加了多音频格式支持（PCM/WAV/MP3/Opus）
+  - 开发了 TypeScript/React 前端客户端
+  - 集成了 Prometheus 监控和 Docker 部署
+
+### 如何贡献
+
+欢迎提交 Pull Request 或报告 Issue 来帮助改进本项目！
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
+
+### 贡献指南
+
+- 遵循现有的代码风格
+- 为新功能添加测试
+- 更新相关文档
+- 确保所有测试通过
+
 ## 致谢
 
 1. [FunASR](https://github.com/modelscope/FunASR)
